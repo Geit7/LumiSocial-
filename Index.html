@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Lumi Social Lite</title>
+<style>
+  body { font-family: Arial; margin:0; padding:0; background:#f0f0f0; transition:0.3s; }
+  body.dark { background:#121212; color:white; }
+  header { background:#ff6600; color:white; padding:15px; display:flex; justify-content:space-between; align-items:center; }
+  header button { padding:5px 10px; border:none; border-radius:5px; cursor:pointer; }
+  .submit-section { padding:10px; background:white; margin:10px; border-radius:10px; transition:0.3s; }
+  body.dark .submit-section { background:#1e1e1e; color:white; }
+  input[type=text], input[type=file] { width:90%; margin:5px 0; padding:8px; }
+  button { padding:8px 15px; border:none; border-radius:5px; cursor:pointer; margin:5px 0; }
+  #posts { display:grid; grid-template-columns: repeat(auto-fill, minmax(150px,1fr)); gap:10px; padding:10px; }
+  .post { background:white; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); cursor:pointer; position:relative; transition:0.3s; }
+  body.dark .post { background:#1e1e1e; color:white; }
+  .post img { width:100%; height:auto; display:block; border-radius:10px 10px 0 0; }
+  .caption { padding:5px; }
+  .likes { display:flex; align-items:center; padding:5px; cursor:pointer; }
+  .likes span { margin-left:5px; }
+  .deleteBtn { position:absolute; top:5px; right:5px; background:red; color:white; border:none; border-radius:5px; padding:2px 5px; cursor:pointer; font-size:0.8em; }
+  #notification { position:fixed; bottom:10px; right:10px; background:#ff6600; color:white; padding:10px 15px; border-radius:10px; display:none; }
+</style>
+</head>
+<body>
+
+<header>
+  Lumi Social Lite
+  <button onclick="toggleDarkMode()">🌙</button>
+</header>
+
+<div class="submit-section">
+  <h3>New Post</h3>
+  <input type="file" id="imageInput" accept="image/*"><br>
+  <input type="text" id="captionInput" placeholder="Write a caption"><br>
+  <button onclick="submitPost()">Submit</button>
+</div>
+
+<div id="posts"></div>
+
+<div id="notification"></div>
+
+<script>
+let posts = JSON.parse(localStorage.getItem('lumiPosts')) || [];
+let likedPosts = JSON.parse(localStorage.getItem('likedPosts')) || [];
+
+function toggleDarkMode(){ document.body.classList.toggle('dark'); }
+
+function submitPost(){
+  const fileInput = document.getElementById('imageInput');
+  const caption = document.getElementById('captionInput').value;
+  if(fileInput.files.length===0 || !caption){ alert("Choose an image and enter a caption!"); return; }
+
+  const reader = new FileReader();
+  reader.onload = function(e){
+    const post = { id: Date.now(), image:e.target.result, caption, likes:0 };
+    posts.unshift(post);
+    localStorage.setItem('lumiPosts', JSON.stringify(posts));
+    document.getElementById('imageInput').value='';
+    document.getElementById('captionInput').value='';
+    renderPosts();
+    showNotification("Post uploaded!");
+  }
+  reader.readAsDataURL(fileInput.files[0]);
+}
+
+function renderPosts(){
+  const container = document.getElementById('posts'); 
+  container.innerHTML='';
+  posts.forEach(post=>{
+    const postDiv = document.createElement('div'); postDiv.className='post';
+    postDiv.innerHTML = `<img src="${post.image}"><div class="caption">${post.caption}</div>
+      <div class="likes" onclick="likePost(${post.id})">❤️ <span>${post.likes}</span></div>
+      <button class="deleteBtn" onclick="deletePost(${post.id}, event)">Delete</button>`;
+    container.appendChild(postDiv);
+  });
+}
+
+function likePost(id){
+  if(likedPosts.includes(id)){ alert("Already liked!"); return; }
+  posts = posts.map(p=>{ if(p.id===id) p.likes++; return p; });
+  likedPosts.push(id);
+  localStorage.setItem('lumiPosts', JSON.stringify(posts));
+  localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+  renderPosts();
+}
+
+function deletePost(id,event){
+  event.stopPropagation();
+  posts = posts.filter(p=>p.id!==id);
+  likedPosts = likedPosts.filter(i=>i!==id);
+  localStorage.setItem('lumiPosts', JSON.stringify(posts));
+  localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+  renderPosts();
+  showNotification("Post deleted!");
+}
+
+function showNotification(msg){
+  const n = document.getElementById('notification');
+  n.innerText = msg; n.style.display='block';
+  setTimeout(()=>{ n.style.display='none'; },2000);
+}
+
+renderPosts();
+</script>
+
+</body>
+</html>
